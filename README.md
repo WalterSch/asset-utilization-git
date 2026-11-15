@@ -29,7 +29,6 @@ Machine learning and time-series forecasting framework for projecting future uti
 - Accumulated meter readings
 
 ## Project Structure
-## Project Organization
 
 ```
 ├── LICENSE            <- Open-source license if one is chosen
