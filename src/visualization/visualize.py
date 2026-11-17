@@ -9,7 +9,7 @@ from IPython.display import display
 df = pd.read_pickle("../../data/interim/01_data_processed.pkl")
 
 # --------------------------------------------------------------
-# Plot single columns
+# Plot single asset
 # --------------------------------------------------------------
 set_df = df[df["sigla"] == "10U-MMVO-363"]
 
@@ -19,7 +19,7 @@ plt.plot(set_df["delta"])
 # number of samples; how many samples are in there?
 plt.plot(set_df["delta"].reset_index(drop=True))
 
-# month
+# by month
 sampling = {
     "sigla": "last",
     "medidor": "last",
@@ -35,13 +35,13 @@ sampling = {
     "delta": "sum",
 }
 
+# resamplig
 df_resampled = (
-    set_df.groupby([pd.Grouper(freq="MS"), "activo"])
+    set_df.groupby([pd.Grouper(freq="ME"), "activo"])
     .agg(sampling)
     .dropna()
     .reset_index()
 )
-
 
 df_resampled = df_resampled[
     (df_resampled["FECHA"] >= "2024-01-01") & (df_resampled["FECHA"] <= "2024-12-31")
@@ -49,23 +49,41 @@ df_resampled = df_resampled[
 df_resampled = df_resampled.set_index("FECHA")
 plt.plot(df_resampled["delta"])
 df_resampled["delta"].sum()
+
 # --------------------------------------------------------------
 # Plot all
 # --------------------------------------------------------------
-# delta through time
+# time
 for desc in df["type"].unique():
     subset = df[df["type"] == desc]
+    df_resampled = (
+        subset.groupby([pd.Grouper(freq="ME"), "activo"])
+        .agg(sampling)
+        .dropna()
+        .reset_index()
+    )
+
+    df_resampled = df_resampled.set_index("FECHA")
+
     fig, ax = plt.subplots()
-    plt.plot(subset["delta"].reset_index(drop=True), label=desc)
+    plt.plot(df_resampled["delta"], label=desc)
     plt.legend()
     plt.show()
 
-# sorted delta
+# number of samples, min/max values
 for desc in df["type"].unique():
     subset = df[df["type"] == desc]
-    subset = subset.sort_values(by="delta")
+    df_resampled = (
+        subset.groupby([pd.Grouper(freq="ME"), "activo"])
+        .agg(sampling)
+        .dropna()
+        .reset_index()
+    )
+
+    df_resampled = df_resampled.sort_values(by="delta").reset_index()
+
     fig, ax = plt.subplots()
-    plt.plot(subset["delta"].reset_index(drop=True), label=desc)
+    plt.plot(df_resampled["delta"], label=desc)
     plt.legend()
     plt.show()
 
@@ -83,105 +101,121 @@ mpl.rcParams["figure.dpi"] = 100
 # --------------------------------------------------------------
 # Compare locations
 # --------------------------------------------------------------
-asset_df = (
-    df.query("type == 'MOTONIVELADORA'")
-    .query("region == '04'")
-    .sort_values(by="loc")
+asset_df = df.query("type == 'MOTONIVELADORA'").query("region == '04'")
+df_resampled = (
+    asset_df.groupby([pd.Grouper(freq="ME"), "activo"])
+    .agg(sampling)
+    .dropna()
     .reset_index()
 )
+df_resampled = df_resampled.sort_values(by=["loc", "delta"]).reset_index()
 
 fig, ax = plt.subplots()
-asset_df.groupby(["loc"])["delta"].plot()
+df_resampled.groupby(["loc"])["delta"].plot()
 ax.set_ylabel("delta")
 ax.set_xlabel("samples")
 plt.legend()
+plt.title("Uso Mensual - location - MOTONIVELADORA - 04")
 plt.show()
-
 
 # --------------------------------------------------------------
 # Compare types
 # --------------------------------------------------------------
-type_df = (
-    df.query("medidor == 'HOROMET'")
-    .query("region == '12'")
-    .sort_values(by="type")
+type_df = df.query("medidor == 'HOROMET'").query("region == '12'")
+df_resampled = (
+    type_df.groupby([pd.Grouper(freq="ME"), "activo"])
+    .agg(sampling)
+    .dropna()
     .reset_index()
 )
+df_resampled = df_resampled.sort_values(by=["type", "delta"]).reset_index()
 
 fig, ax = plt.subplots()
-type_df.groupby(["type"])["delta"].plot()
+df_resampled.groupby(["type"])["delta"].plot()
 ax.set_ylabel("delta")
 ax.set_xlabel("samples")
 plt.legend()
+plt.title("Uso Mensual - type - HOROMET - 12")
 plt.show()
 
 # --------------------------------------------------------------
 # Compare years
 # --------------------------------------------------------------
-year_df = (
-    df.query("type == 'MOTONIVELADORA'")
-    .query("region == '14'")
-    .sort_values(by="year")
+year_df = df.query("type == 'MOTONIVELADORA'").query("region == '14'")
+df_resampled = (
+    year_df.groupby([pd.Grouper(freq="ME"), "activo"])
+    .agg(sampling)
+    .dropna()
     .reset_index()
 )
+df_resampled = df_resampled.sort_values(by=["year", "delta"]).reset_index()
 
 fig, ax = plt.subplots()
-year_df.groupby(["year"])["delta"].plot()
+df_resampled.groupby(["year"])["delta"].plot()
 ax.set_ylabel("delta")
 ax.set_xlabel("samples")
 plt.legend()
+plt.title("Uso Mensual - year - MOTONIVELADORA - 14")
 plt.show()
 
 # --------------------------------------------------------------
 # Compare ulectura
 # --------------------------------------------------------------
-ulectura_df = (
-    df.query("type == 'MOTONIVELADORA'")
-    .query("region == '12'")
-    .sort_values(by="ulectura")
+ulectura_df = df.query("type == 'MOTONIVELADORA'").query("region == '12'")
+df_resampled = (
+    ulectura_df.groupby([pd.Grouper(freq="ME"), "activo"])
+    .agg(sampling)
+    .dropna()
     .reset_index()
 )
+df_resampled = df_resampled.sort_values(by=["ulectura", "delta"]).reset_index()
 
 fig, ax = plt.subplots()
-ulectura_df.groupby(["ulectura"])["delta"].plot()
+df_resampled.groupby(["ulectura"])["delta"].plot()
 ax.set_ylabel("delta")
 ax.set_xlabel("samples")
 plt.legend()
+plt.title("Uso Mensual - ulectura - MOTONIVELADORA - 12")
 plt.show()
 
 # --------------------------------------------------------------
 # Compare bit-year
 # --------------------------------------------------------------
-bit_year_df = (
-    df.query("type == 'CAMION TOLVA'")
-    .query("region == '11'")
-    .sort_values(by="bit-year")
+bit_year_df = df.query("type == 'CAMION TOLVA'").query("region == '11'")
+df_resampled = (
+    bit_year_df.groupby([pd.Grouper(freq="ME"), "activo"])
+    .agg(sampling)
+    .dropna()
     .reset_index()
 )
+df_resampled = df_resampled.sort_values(by=["bit-year", "delta"]).reset_index()
 
 fig, ax = plt.subplots()
-bit_year_df.groupby(["bit-year"])["delta"].plot()
+df_resampled.groupby(["bit-year"])["delta"].plot()
 ax.set_ylabel("delta")
 ax.set_xlabel("samples")
 plt.legend()
+plt.title("Uso Mensual - bityear - CAMION TOLVA - 11")
 plt.show()
 
 # --------------------------------------------------------------
 # Plot multiple axis
 # --------------------------------------------------------------
-desc = "CAMION ALJIBE"
+desc = "MOTONIVELADORA"
 region = "04"
 
-all_axis_df = (
-    df.query(f"type == '{desc}'")
-    .query(f"region == '{region}'")
-    .sort_values(by="ulectura")
+all_axis_df = df.query(f"type == '{desc}'").query(f"region == '{region}'")
+df_resampled = (
+    all_axis_df.groupby([pd.Grouper(freq="ME"), "activo"])
+    .agg(sampling)
+    .dropna()
     .reset_index()
 )
+df_resampled = df_resampled.sort_values(by=["ulectura", "delta"]).reset_index()
 
 # in one figure
 fig, ax = plt.subplots()
-all_axis_df[["delta", "ulectura"]].plot(ax=ax)
+df_resampled[["delta", "ulectura"]].plot(ax=ax)
 ax.set_ylabel("delta")
 ax.set_xlabel("samples")
 plt.legend()
@@ -189,8 +223,8 @@ plt.show()
 
 # in two figures
 fig, ax = plt.subplots(nrows=2, sharex=True, figsize=(20, 10))
-all_axis_df[["delta"]].plot(ax=ax[0])
-all_axis_df[["ulectura"]].plot(ax=ax[1])
+df_resampled[["delta"]].plot(ax=ax[0])
+df_resampled[["ulectura"]].plot(ax=ax[1])
 
 ax[0].legend(
     loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=3, fancybox=True, shadow=True
@@ -211,17 +245,20 @@ regions = df["region"].unique()
 
 for desc in types:
     for region in regions:
-        combined_plot_df = (
-            df.query(f"type == '{desc}'")
-            .query(f"region == '{region}'")
-            .sort_values(by="ulectura")
+        combined_plot_df = df.query(f"type == '{desc}'").query(f"region == '{region}'")
+
+        df_resampled = (
+            combined_plot_df.groupby([pd.Grouper(freq="ME"), "activo"])
+            .agg(sampling)
+            .dropna()
             .reset_index()
         )
+        df_resampled = df_resampled.sort_values(by=["ulectura", "delta"]).reset_index()
 
         if len(combined_plot_df) > 0:
             fig, ax = plt.subplots(nrows=2, sharex=True, figsize=(20, 10))
-            combined_plot_df[["delta"]].plot(ax=ax[0])
-            combined_plot_df[["ulectura"]].plot(ax=ax[1])
+            df_resampled[["delta"]].plot(ax=ax[0])
+            df_resampled[["ulectura"]].plot(ax=ax[1])
 
             ax[0].legend(
                 loc="upper center",
@@ -238,5 +275,7 @@ for desc in types:
                 shadow=True,
             )
             ax[1].set_xlabel("samples")
+
+            plt.savefig(f"../../reports/figures/{desc.title()} ({region}).png")
 
             plt.show()

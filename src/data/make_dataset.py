@@ -1,8 +1,11 @@
+# Libraries
 import pandas as pd
 from glob import glob
 
+# List of files in folder
 files = glob("../../data/raw/bit/*.csv")
 
+# Diccionario archivo bitácora
 dtype_dic_bit = {
     "total_rec": str,
     "FOLIO": str,
@@ -31,6 +34,7 @@ dtype_dic_bit = {
 }
 
 
+# read data from files
 def read_data_from_files(files):
     bit_df = pd.DataFrame()
 
@@ -76,9 +80,11 @@ def read_data_from_files(files):
 
 
 bit_df = read_data_from_files(files)
+
 # --------------------------------------------------------------
-# Merging datasets
+# Merge datasets
 # --------------------------------------------------------------
+
 # Rename columns
 bit_df.columns = ["activo", "sigla", "medidor", "ini", "fin", "region", "ano", "set"]
 
@@ -107,11 +113,9 @@ data_resampled = (
     .reset_index()
 )
 
-df_aux_2 = bit_df[bit_df["sigla"] == "10U-MMVO-363"]
-df_aux = data_resampled[data_resampled["sigla"] == "10U-MMVO-363"]
 
 # --------------------------------------------------------------
-# Tipologia
+# Typology
 # --------------------------------------------------------------
 dtype_dic_rnm = {
     "ASSETNUM": str,
@@ -172,11 +176,12 @@ dtype_dic_rnm = {
 }
 
 
-# asset features
+# Asset features
 rnm_df = pd.read_csv(
     "../../data/external/asset_vehiculosv2.csv", sep=";", dtype=dtype_dic_rnm
 )
-# add type, loc, year, ulectura
+
+# Add type, loc, year, ulectura
 data_resampled = pd.merge(
     left=data_resampled,
     right=rnm_df[["ASSETNUM", "CLASE", "LOCATION", "AÑO", "ULECTURA"]],
@@ -185,7 +190,8 @@ data_resampled = pd.merge(
     right_on="ASSETNUM",
 )
 del data_resampled["ASSETNUM"]
-# rename columns
+
+# Rename columns
 data_resampled.columns = [
     "FECHA",
     "activo",
@@ -202,22 +208,24 @@ data_resampled.columns = [
     "year",
     "ulectura",
 ]
-# dropna
+
+# Dropna
 data_resampled = data_resampled.dropna(subset=["type", "ulectura"])
-# drop sin medidor
+
+# Drop "sin medidor"
 data_resampled = data_resampled[data_resampled["ulectura"] != "SIN MEDIDOR"]
 
-# Reindexar
+# Reindexing
 data_resampled.index = pd.to_datetime(data_resampled["FECHA"])
 del data_resampled["FECHA"]
 
-# data types
+# Data types
 data_resampled["set"] = data_resampled["set"].astype("int")
 data_resampled["ulectura"] = data_resampled["ulectura"].apply(
     lambda x: float(str(x).replace(".", "").replace(",", ".")) if pd.notna(x) else None
 )
 
-# put the columns in order
+# Ordering columns
 data_resampled = data_resampled[
     [
         "activo",
@@ -236,7 +244,7 @@ data_resampled = data_resampled[
     ]
 ]
 
-# review
+# Review
 data_resampled.info()
 
 # --------------------------------------------------------------
