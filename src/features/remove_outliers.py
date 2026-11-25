@@ -1,3 +1,4 @@
+# Libraries
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,27 +9,17 @@ from sklearn.neighbors import LocalOutlierFactor  # pip install scikit-learn
 # --------------------------------------------------------------
 # Load data
 # --------------------------------------------------------------
+# processed data
 df = pd.read_pickle("../../data/interim/01_data_processed.pkl")
 
+# outlier columns
 outlier_columns = list(df.columns[12:])
+
 # --------------------------------------------------------------
 # Plotting outliers
 # --------------------------------------------------------------
-
-df_aux_hr = (
-    df[df["medidor"] == "HOROMET"]
-    .groupby("type")["delta"]
-    .count()
-    .reset_index()
-    .sort_values(by="delta", ascending=False)
-)
-df_aux_km = (
-    df[df["medidor"] == "ODOMKM"]
-    .groupby("type")["delta"]
-    .count()
-    .reset_index()
-    .sort_values(by="delta", ascending=False)
-)
+df_aux_hr = df[df["medidor"] == "HOROMET"].groupby("type")["delta"].count().reset_index().sort_values(by="delta", ascending=False)
+df_aux_km = df[df["medidor"] == "ODOMKM"].groupby("type")["delta"].count().reset_index().sort_values(by="delta", ascending=False)
 
 print(f" Equipos Horomet con mayor número de días registrados: {df_aux_hr.head(6)}")
 print(f" Equipos Odomkm con mayor número de días registrados: {df_aux_km.head(6)}")
@@ -37,29 +28,25 @@ plt.style.use("fivethirtyeight")
 plt.rcParams["figure.figsize"] = (20, 5)
 plt.rcParams["figure.dpi"] = 100
 
-set_df = df[
-    (df["type"] == "MOTONIVELADORA")
-    | (df["type"] == "RETROEXCAVADORA")
-    | (df["type"] == "CARGADOR FRONTAL")
-    | (df["type"] == "RODRILLO VIBRATORIO UN TAMBOR")
-    | (df["type"] == "EXCAVADORA ORUGA")
-    | (df["type"] == "BULLDOZER ORUGA")
-]
+set_df = df[(df["type"] == "MOTONIVELADORA") | 
+            (df["type"] == "RETROEXCAVADORA") |
+            (df["type"] == "CARGADOR FRONTAL") |
+            (df["type"] == "RODRILLO VIBRATORIO UN TAMBOR") |
+            (df["type"] == "EXCAVADORA ORUGA") |
+            (df["type"] == "BULLDOZER ORUGA")]
 
 set_df[outlier_columns + ["type"]].boxplot(by="type", figsize=(60, 10), layout=(1, 3))
 
-set_df = df[
-    (df["type"] == "CAMIONETA")
-    | (df["type"] == "CAMION TOLVA")
-    | (df["type"] == "CAMION PLANO")
-    | (df["type"] == "CAMION ALJIBE")
-    | (df["type"] == "CAMION GRUA")
-    | (df["type"] == "STATION WAGON")
-]
+set_df = df[(df["type"] == "CAMIONETA") | 
+            (df["type"] == "CAMION TOLVA") |
+            (df["type"] == "CAMION PLANO") |
+            (df["type"] == "CAMION ALJIBE") |
+            (df["type"] == "CAMION GRUA") |
+            (df["type"] == "STATION WAGON")]
 
 set_df[outlier_columns + ["type"]].boxplot(by="type", figsize=(60, 10), layout=(1, 3))
 
-
+# plot binary outliers
 def plot_binary_outliers(dataset, col, outlier_col, reset_index):
     """Plot outliers in case of a binary outlier score. Here, the col specifies the real data
     column and outlier_col the columns with a binary value (outlier or not).
@@ -98,7 +85,7 @@ def plot_binary_outliers(dataset, col, outlier_col, reset_index):
     )
 
     plt.legend(
-        ["outlier " + col, "no outlier " + col],
+        ["non outlier " + col, "outlier " + col],
         loc="upper center",
         ncol=2,
         fancybox=True,
@@ -106,12 +93,10 @@ def plot_binary_outliers(dataset, col, outlier_col, reset_index):
     )
     plt.show()
 
-
 # --------------------------------------------------------------
 # Interquartile range (distribution based)
 # --------------------------------------------------------------
-set_df = df[(df["type"] == "MOTONIVELADORA")]
-
+set_df = df[(df["type"] == "CAMION TOLVA")]
 
 # Insert IQR function
 def mark_outliers_iqr(dataset, col):
@@ -149,16 +134,16 @@ plot_binary_outliers(
     dataset=dataset, col=col, outlier_col=col + "_outlier", reset_index=True
 )
 
-
 # --------------------------------------------------------------
 # Chauvenets criteron (distribution based)
 # --------------------------------------------------------------
 
 # Check for normal distribution
-set_df = df[df["type"] == "MOTONIVELADORA"]
+set_df = df[df["type"] == "FURGON PESAJE"]
 
-set_df[outlier_columns + ["type"]].plot.hist(by="type", figsize=(20, 20), layout=(3, 3))
-
+set_df[outlier_columns + ["type"]].plot.hist(
+    by="type", figsize=(20, 20), layout=(3, 3)
+)
 
 # Insert Chauvenet's function
 def mark_outliers_chauvenet(dataset, col, C=2):
@@ -218,7 +203,6 @@ plot_binary_outliers(
 # --------------------------------------------------------------
 set_df = df[df["type"] == "CAMION TOLVA"]
 
-
 # Insert LOF function
 def mark_outliers_lof(dataset, columns, n=20):
     """Mark values as outliers using LOF
@@ -249,34 +233,37 @@ dataset, outliers, X_scores = mark_outliers_lof(set_df, outlier_columns)
 
 col = "delta"
 plot_binary_outliers(
-    dataset=dataset.reset_index(), col=col, outlier_col="outlier_lof", reset_index=True
-)
+        dataset=dataset.reset_index(), col=col, outlier_col= "outlier_lof", reset_index=True
+    )
+
 # --------------------------------------------------------------
 # Check outliers grouped by type
 # --------------------------------------------------------------
-desc = "CAMION TOLVA"
+desc = "MOTONIVELADORA"
 col = "delta"
 
 dataset = mark_outliers_iqr(df[df["type"] == desc], col)
 plot_binary_outliers(
-    dataset=dataset, col=col, outlier_col=col + "_outlier", reset_index=True
-)
+        dataset=dataset, col=col, outlier_col=col + "_outlier", reset_index=True
+    )
 
 
 dataset = mark_outliers_chauvenet(df[df["type"] == desc].reset_index(), col, C=10)
 plot_binary_outliers(
-    dataset=dataset, col=col, outlier_col=col + "_outlier", reset_index=True
-)
+        dataset=dataset, col=col, outlier_col=col + "_outlier", reset_index=True
+    )
 
-dataset, outliers, X_scores = mark_outliers_lof(df[df["type"] == desc], outlier_columns)
+dataset, outliers, X_scores = mark_outliers_lof(
+    df[df["type"] == desc], outlier_columns
+)
 
 plot_binary_outliers(
-    dataset=dataset, col=col, outlier_col="outlier_lof", reset_index=True
-)
+        dataset=dataset, col=col, outlier_col="outlier_lof", reset_index=True
+    )
+
 # --------------------------------------------------------------
 # Choose method and deal with outliers
 # --------------------------------------------------------------
-
 # Test on single column
 col = "delta"
 dataset = mark_outliers_chauvenet(df.reset_index(), col=col, C=10)
@@ -287,16 +274,14 @@ dataset.loc[dataset["delta_outlier"], "delta"] = np.nan
 outliers_removed_df = df.copy()
 for col in outlier_columns:
     for desc in df["type"].unique():
-        dataset = mark_outliers_chauvenet(
-            df[df["type"] == desc].reset_index(), col=col, C=10
-        )
+        dataset = mark_outliers_chauvenet(df[df["type"] == desc].reset_index(), col=col, C=10)
 
         # Replaced values marked as outliers as NaN
         dataset.loc[dataset[col + "_outlier"], col] = np.nan
-
+        
         dataset.index = dataset["FECHA"]
-
-        del dataset["FECHA"]
+        
+        del dataset['FECHA']
 
         # Update the column in the original dataframe
         outliers_removed_df.loc[(outliers_removed_df["type"] == desc), col] = dataset[

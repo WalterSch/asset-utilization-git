@@ -1,8 +1,12 @@
-# Libraries
+# Librerías
 import pandas as pd
 from glob import glob
 
-# List of files in folder
+# --------------------------------------------------------------
+# Bit dataset
+# --------------------------------------------------------------
+
+# Enlista todos los archivos .csv de la carpeta
 files = glob("../../data/raw/bit/*.csv")
 
 # Diccionario archivo bitácora
@@ -34,28 +38,37 @@ dtype_dic_bit = {
 }
 
 
-# read data from files
+# Función para leer datos
 def read_data_from_files(files):
+    # Dataframe vacío
     bit_df = pd.DataFrame()
-
+    # Contador de archivos
     bit_set = 1
-
+    # Ciclo for para leer todos los archivos en la carpeta
     for f in files:
+        # Texto indica qué archivo está leyendo
         print(f"Leyendo archivo {bit_set}")
+        # extraer region desde el nombre del archivo
         region = f.split("_")[1].replace("fos", "")[:2]
+        # extraer ano desde el nombre del archivo
         ano = f.split("_")[1].replace("fos", "")[2:6]
-
+        # leer archivo y asignarlo a df
         df = pd.read_csv(f, sep=";", dtype=dtype_dic_bit)
-
+        # columna region
         df["region"] = region
+        # columna ano
         df["ano"] = ano
-
+        # columna set
         df["set"] = bit_set
+        # contador +1
         bit_set += 1
+        # concatenar a medida que se leen archivos a partir del dataframe vacío
         bit_df = pd.concat([bit_df, df])
 
+    # fecha como index
     bit_df.index = pd.to_datetime(bit_df["FECHA"], format="%d/%m/%y")
 
+    # eliminar filas innecesarias
     del bit_df["total_rec"]
     del bit_df["FOLIO"]
     del bit_df["INGRESO"]
@@ -76,25 +89,28 @@ def read_data_from_files(files):
     del bit_df["agno"]
     del bit_df["FECHA"]
 
+    # retornar df
     return bit_df
 
 
 bit_df = read_data_from_files(files)
 
 # --------------------------------------------------------------
-# Merge datasets
+# Estructurar data
 # --------------------------------------------------------------
 
-# Rename columns
+# Renombrar columnas
 bit_df.columns = ["activo", "sigla", "medidor", "ini", "fin", "region", "ano", "set"]
 
-# Delta
+# calcular delta movimiento fila a fila
 bit_df["delta"] = bit_df["fin"] - bit_df["ini"]
 bit_df = bit_df[bit_df["delta"] > 0]
+
 # --------------------------------------------------------------
-# Resample data
+# Remuestrar data por día
 # --------------------------------------------------------------
 
+# calculo a realizar por columna
 sampling = {
     "sigla": "last",
     "medidor": "last",
@@ -106,6 +122,7 @@ sampling = {
     "delta": "sum",
 }
 
+# remuestreo por día y N° activo
 data_resampled = (
     bit_df.groupby([pd.Grouper(freq="D"), "activo"])
     .agg(sampling)
@@ -113,10 +130,11 @@ data_resampled = (
     .reset_index()
 )
 
+# --------------------------------------------------------------
+# Tipología, ubicación, año adquisición, última lectura de activos
+# --------------------------------------------------------------
 
-# --------------------------------------------------------------
-# Typology
-# --------------------------------------------------------------
+# Diccionario archivo Registro Nacional de Maquinarias y Vehículos
 dtype_dic_rnm = {
     "ASSETNUM": str,
     "DESCRIPTION": str,
@@ -175,13 +193,12 @@ dtype_dic_rnm = {
     "UFECHA": str,
 }
 
-
-# Asset features
+# Atributos de los activos
 rnm_df = pd.read_csv(
     "../../data/external/asset_vehiculosv2.csv", sep=";", dtype=dtype_dic_rnm
 )
 
-# Add type, loc, year, ulectura
+# Añadir tipología (CLASE), ubicación (LOCATION), año adquisición (YEAR), última lectura del medidor (ulectura)
 data_resampled = pd.merge(
     left=data_resampled,
     right=rnm_df[["ASSETNUM", "CLASE", "LOCATION", "AÑO", "ULECTURA"]],
@@ -189,9 +206,11 @@ data_resampled = pd.merge(
     left_on="activo",
     right_on="ASSETNUM",
 )
+
+# Borrar columna repetida
 del data_resampled["ASSETNUM"]
 
-# Rename columns
+# Renombrar columnas
 data_resampled.columns = [
     "FECHA",
     "activo",
@@ -209,23 +228,23 @@ data_resampled.columns = [
     "ulectura",
 ]
 
-# Dropna
+# Eliminar NA de las columnas type y ulectura
 data_resampled = data_resampled.dropna(subset=["type", "ulectura"])
 
-# Drop "sin medidor"
+# Eliminar equipos SIN MEDIDOR
 data_resampled = data_resampled[data_resampled["ulectura"] != "SIN MEDIDOR"]
 
-# Reindexing
-data_resampled.index = pd.to_datetime(data_resampled["FECHA"])
-del data_resampled["FECHA"]
+# Reindexar FECHA
+data_resampled["FECHA"] = pd.to_datetime(data_resampled["FECHA"])
+data_resampled = data_resampled.set_index("FECHA")
 
-# Data types
+# Tipo de data
 data_resampled["set"] = data_resampled["set"].astype("int")
 data_resampled["ulectura"] = data_resampled["ulectura"].apply(
     lambda x: float(str(x).replace(".", "").replace(",", ".")) if pd.notna(x) else None
 )
 
-# Ordering columns
+# Ordenar columnas
 data_resampled = data_resampled[
     [
         "activo",
@@ -244,11 +263,11 @@ data_resampled = data_resampled[
     ]
 ]
 
-# Review
+# Revisión
 data_resampled.info()
 
 # --------------------------------------------------------------
-# Export dataset
+# Exportar dataset
 # --------------------------------------------------------------
 data_resampled.to_pickle("../../data/interim/01_data_processed.pkl")
 data_resampled.to_csv("../../data/interim/01_data_processed.csv")

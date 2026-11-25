@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+#from LearningAlgorithms import ClassificationAlgorithms
 import seaborn as sns
 import itertools
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -28,13 +29,12 @@ plt.rcParams["figure.figsize"] = (20, 5)
 plt.rcParams["figure.dpi"] = 100
 plt.rcParams["lines.linewidth"] = 2
 
-df = pd.read_pickle("../../data/interim/03_data_features_km.pkl")
-df_set = df.dropna()
-df_set.info()
-
+df = pd.read_pickle("../../data/interim/03_data_features_hr.pkl")
 # --------------------------------------------------------------
 # Create a training and test set
 # --------------------------------------------------------------
+df_set = df.dropna()
+df_set.info()
 df_set = df_set[df_set["bit-year"] != "2026"]
 df_set = df_set.drop(["sigla", "medidor", "bit-year"], axis=1)
 
@@ -42,7 +42,7 @@ X = df_set.drop("target", axis=1)
 y = df_set["target"]
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.25, random_state=42
+    X, y, test_size=0.25, random_state=10
 )
 
 # Histograma
@@ -91,7 +91,6 @@ numeric_features = [
     "std_3_anos",
     "std_5_anos",
     "uso_por_dia",
-    "max_historico",
     "uso_vs_media",
     "type_mean_usage",
     "type_loc_mean_usage",
@@ -123,6 +122,23 @@ feature_set_4 = [
     "std_3_anos",
     "type",
     "loc",
+]
+
+feature_set_5 = [
+    "uso_anual",
+    "dias_utilizados",
+    "uso_promedio",
+    "edad",
+    "loc",
+    "type",
+    "type_loc_mean_usage",
+    "uso_t_1",
+    "uso_t_2",
+    "uso_t_3",
+    "dias_t_1",
+    "dias_t_2",
+    "media_3_anos",
+    
 ]
 
 
@@ -170,6 +186,7 @@ possible_feature_sets = [
     feature_set_2,
     feature_set_3,
     feature_set_4,
+    feature_set_5,
     top10_features,
     feature_scores_list,
 ]
@@ -179,6 +196,7 @@ feature_names = [
     "Historical Usage",
     "All Features",
     "Reduced Set",
+    "Selected features",
     "Top 10",
     "KBest",
 ]
